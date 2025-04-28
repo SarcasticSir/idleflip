@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Idle Flip</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>Idle Flip</h1>
+
+    <div id="game">
+        <div id="stats">
+            <p>Coins:</p>
+            <ul id="coin-list">
+                <!-- List of coin types and counts -->
+            </ul>
+            <p>Total: <span id="money">0</span> </p>
+        </div>
+
+        <div id="actions">
+            <button id="flip-button">Flip Coins</button>
+
+            <div id="buy-amount-buttons">
+                <button class="amount-button" data-amount="1">1x</button>
+                <button class="amount-button" data-amount="5">5x</button>
+                <button class="amount-button" data-amount="10">10x</button>
+                <button class="amount-button" data-amount="max">Max</button>
+            </div>
+
+            <button id="buy-coin-button">Buy best coin!</button>
+
+            <button id="mute-button">Mute: Off</button>
+        </div>
+
+        <div id="results">
+            <p>Last Flip: <span id="flip-result">-</span></p>
+        </div>
+        <div id="reset-container">
+            <button id="reset-button">RESET</button>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
