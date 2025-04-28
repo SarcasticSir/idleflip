@@ -1,6 +1,6 @@
 const CONFIG = {
-    currencyName: "Chrono Units",
-    flipDuration: 50, // For rask testing
+    currencyName: "Chrono Units", // 🌟 Navn på valutaen
+    flipDuration: 50,             // ⏳ Flip-animasjonens varighet i ms
 
     coins: [
         { name: "Nano Tick", value: 1, upgradeCost: 10 },
@@ -16,13 +16,13 @@ const CONFIG = {
     ],
 
     autoFlipper: {
-        unlockAt: 1000,
-        baseInterval: 60000,
-        intervalReduction: 5000,
-        minInterval: 10000,
-        upgradeBaseCost: 500,
-        upgradeCostMultiplier: 2
+        unlockAt: 1000,             // 🔓 Låses opp når du har 1000 Chrono Units
+        baseInterval: 60000,         // 🕰️ Start: flip hvert 60 sekunder
+        intervalReduction: 5000,     // 🔧 Hver oppgradering reduserer med 5 sek
+        minInterval: 10000,          // ⏲️ Minimumsintervall: 10 sekunder
+        upgradeBaseCost: 500,        // 💵 Første autoflipper-kjøp koster 500 units
+        upgradeCostMultiplier: 2     // 💥 Hver oppgradering dobler prisen
     },
 
-    soundEnabledDefault: true
+    soundEnabledDefault: true       // 🔊 Start med lyd på
 };

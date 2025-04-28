@@ -7,12 +7,10 @@
 </head>
 <body>
     <div id="layout">
-        <!-- Oppgraderinger -->
+        <!-- Upgrades - starter skjult -->
         <div id="upgrades">
-            <h2>Upgrades</h2>
-            <div id="upgrades-list">
-                <!-- Oppgraderingsknapper kommer dynamisk her -->
-            </div>
+            <h2>Purchased Upgrades:</h2>
+            <div id="upgrades-list"></div>
         </div>
 
         <!-- Spillcontainer -->
@@ -20,11 +18,11 @@
             <h1>Idle Flip</h1>
 
             <div id="stats">
-                <p>Coins:</p>
-                <ul id="coin-list"></ul>
                 <p>Total: <span id="money">0</span></p>
                 <p>Lifetime Total: <span id="lifetime">0 Chrono Units collected</span></p>
             </div>
+
+            <ul id="coin-list"></ul>
 
             <div id="actions">
                 <button id="flip-button">Flip Coins</button>
@@ -38,6 +36,7 @@
 
                 <button id="buy-coin-button">Buy best coin!</button>
                 <button id="mute-button">Mute: Off</button>
+                <!-- Autoflipper-knapp legges her dynamisk -->
             </div>
 
             <div id="results">

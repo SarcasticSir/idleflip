@@ -1,5 +1,3 @@
-/* css/style.css */
-
 body {
     font-family: 'Courier New', Courier, monospace;
     background-color: #f0f0f0;
@@ -35,30 +33,17 @@ body {
 #upgrades-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 5px;
 }
 
-#upgrades-list button {
-    width: 100%;
-    padding: 10px;
-    font-size: 1em;
-    border: 2px solid #333;
-    background: repeating-linear-gradient(
-        45deg,
-        #4CAF50,
-        #4CAF50 5px,
-        #45a049 5px,
-        #45a049 10px
-    );
-    color: black;
+.upgrade-item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9em;
     font-weight: bold;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: transform 0.1s, background 0.3s;
-}
-
-#upgrades-list button:hover {
-    transform: scale(1.02);
+    color: #333;
+    margin: 2px 0;
 }
 
 /* Spillcontainer */
@@ -78,20 +63,9 @@ h1 {
     margin-bottom: 20px;
 }
 
-/* Stats-seksjonen */
 #stats {
     text-align: center;
-    margin-bottom: 20px;
-}
-
-#coin-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 10px 0;
-}
-
-#coin-list li {
-    margin: 5px 0;
+    margin-bottom: 10px;
 }
 
 #money {
@@ -104,7 +78,17 @@ h1 {
     color: #555;
 }
 
-/* Actions */
+#coin-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 10px 0;
+    text-align: center;
+}
+
+#coin-list li {
+    margin: 5px 0;
+}
+
 #actions {
     display: flex;
     flex-direction: column;
@@ -132,6 +116,19 @@ h1 {
 
 #actions button:hover {
     transform: scale(1.02);
+}
+
+/* Spesiell stil for autoflipper-knappen */
+#upgrade-auto-button {
+    background: repeating-linear-gradient(
+        45deg,
+        #4CAF50,
+        #4CAF50 5px,
+        #45a049 5px,
+        #45a049 10px
+    );
+    color: black;
+    font-weight: bold;
 }
 
 #buy-amount-buttons {

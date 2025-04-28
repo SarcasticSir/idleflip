@@ -1,5 +1,3 @@
-// game.js
-
 // Spilldata
 let coins = {};
 let money = 0;
@@ -7,23 +5,28 @@ let lifetimeTotal = 0;
 let soundEnabled = CONFIG.soundEnabledDefault;
 let selectedBuyAmount = "1";
 
-// Autoflipper data
-let autoFlipperUnlocked = false;
-let autoFlipperActive = false;
+// Oppgraderingsdata
+let purchasedUpgrades = []; // <--- NYTT: Husk alle kjøpte upgrades
+
+// Autoflipper spesifikt
+let autoFlipperLevel = 0;
 let autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
 let autoFlipperTimer = null;
-let autoFlipperLevel = 0;
+let autoflipProgress = 0;
+let autoflipProgressTimer = null;
 
 // Lyd
 let flipSound = new Audio('assets/sounds/placeholder_flip.mp3');
 
-// Koble knapper
-document.getElementById('flip-button').addEventListener('click', flipCoins);
+// ============================
+// INIT / LOAD
+// ============================
+
+document.getElementById('flip-button').addEventListener('click', manualFlipCoins);
 document.getElementById('buy-coin-button').addEventListener('click', buyBestCoin);
 document.getElementById('mute-button').addEventListener('click', toggleSound);
 document.getElementById('reset-button').addEventListener('click', resetGame);
 
-// Start spill
 loadGame();
 
 function loadGame() {
@@ -31,6 +34,8 @@ function loadGame() {
     const savedMoney = parseInt(localStorage.getItem('idleflip_money'));
     const savedLifetime = parseInt(localStorage.getItem('idleflip_lifetime'));
     const savedSound = localStorage.getItem('idleflip_sound');
+    const savedUpgrades = JSON.parse(localStorage.getItem('idleflip_upgrades')) || [];
+    const savedAutoLevel = parseInt(localStorage.getItem('idleflip_autoFlipperLevel')) || 0;
 
     if (savedCoins) {
         coins = savedCoins;
@@ -44,6 +49,12 @@ function loadGame() {
     if (!isNaN(savedMoney)) money = savedMoney;
     if (!isNaN(savedLifetime)) lifetimeTotal = savedLifetime;
     if (savedSound !== null) soundEnabled = savedSound === 'true';
+    purchasedUpgrades = savedUpgrades;
+    autoFlipperLevel = savedAutoLevel;
+
+    if (purchasedUpgrades.includes('autoflipper')) {
+        setupAutoFlipper();
+    }
 
     updateDisplay();
     setupAmountButtons();
@@ -61,7 +72,13 @@ function saveGame() {
     localStorage.setItem('idleflip_money', money.toString());
     localStorage.setItem('idleflip_lifetime', lifetimeTotal.toString());
     localStorage.setItem('idleflip_sound', soundEnabled.toString());
+    localStorage.setItem('idleflip_upgrades', JSON.stringify(purchasedUpgrades));
+    localStorage.setItem('idleflip_autoFlipperLevel', autoFlipperLevel.toString());
 }
+
+// ============================
+// DISPLAY
+// ============================
 
 function updateDisplay() {
     const coinList = document.getElementById('coin-list');
@@ -81,9 +98,7 @@ function updateDisplay() {
     document.getElementById('mute-button').innerText = `Mute: ${soundEnabled ? "Off" : "On"}`;
 
     updateBuyButtonText();
-    updateAutoflipperStatus();
     updateAutoFlipperButton();
-    checkAutoFlipperUnlock();
 }
 
 function updateBuyButtonText() {
@@ -105,8 +120,18 @@ function updateBuyButtonText() {
     document.getElementById('buy-coin-button').innerText = "Not enough money!";
 }
 
-function flipCoins() {
-    document.getElementById('flip-result').innerText = 'Flipping...';
+// ============================
+// FLIPPING
+// ============================
+
+function manualFlipCoins() {
+    flipCoins(true);
+}
+
+function flipCoins(isManual = false) {
+    if (isManual) {
+        document.getElementById('flip-result').innerText = 'Flipping...';
+    }
 
     if (soundEnabled) flipSound.play();
 
@@ -128,11 +153,14 @@ function flipCoins() {
         });
 
         ensureAtLeastOneCoin();
-
-        document.getElementById('flip-result').innerText = `${heads} Heads, ${tails} Tails`;
         autoUpgradeCoins();
         updateDisplay();
         saveGame();
+        checkAutoFlipperUnlock();
+
+        if (isManual) {
+            document.getElementById('flip-result').innerText = `${heads} Heads, ${tails} Tails`;
+        }
     }, CONFIG.flipDuration);
 }
 
@@ -142,6 +170,10 @@ function ensureAtLeastOneCoin() {
         coins[CONFIG.coins[0].name] = 1;
     }
 }
+
+// ============================
+// KJØP
+// ============================
 
 function buyBestCoin() {
     for (let i = CONFIG.coins.length - 1; i >= 0; i--) {
@@ -180,6 +212,110 @@ function autoUpgradeCoins() {
     }
 }
 
+// ============================
+// AUTOLFLIPPER
+// ============================
+
+function checkAutoFlipperUnlock() {
+    if (!purchasedUpgrades.includes('autoflipper') && money >= CONFIG.autoFlipper.unlockAt) {
+        showAutoFlipperBuyButton();
+    }
+}
+
+function showAutoFlipperBuyButton() {
+    if (!document.getElementById('upgrade-auto-button')) {
+        const button = document.createElement('button');
+        button.id = 'upgrade-auto-button';
+        button.addEventListener('click', purchaseOrUpgradeAutoFlipper);
+        document.getElementById('actions').appendChild(button);
+    }
+    updateAutoFlipperButton();
+}
+
+function updateAutoFlipperButton() {
+    const button = document.getElementById('upgrade-auto-button');
+    if (!button) return;
+
+    const nextCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
+
+    button.innerText = purchasedUpgrades.includes('autoflipper')
+        ? `Upgrade Autoflipper v${autoFlipperLevel + 1}: ${nextCost} ${CONFIG.currencyName}`
+        : `Buy Autoflipper v1: ${CONFIG.autoFlipper.upgradeBaseCost} ${CONFIG.currencyName}`;
+
+    button.style.color = (money >= nextCost) ? 'black' : 'red';
+}
+
+function purchaseOrUpgradeAutoFlipper() {
+    const nextCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
+
+    if (money >= nextCost) {
+        money -= nextCost;
+        autoFlipperLevel += 1;
+
+        if (!purchasedUpgrades.includes('autoflipper')) {
+            purchasedUpgrades.push('autoflipper');
+            setupAutoFlipper();
+            showUpgradesSection();
+        }
+
+        updateUpgradeDisplay();
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function setupAutoFlipper() {
+    restartAutoFlipperTimer();
+}
+
+function restartAutoFlipperTimer() {
+    clearInterval(autoFlipperTimer);
+    clearInterval(autoflipProgressTimer);
+    autoflipProgress = 0;
+
+    autoFlipperInterval = Math.max(
+        CONFIG.autoFlipper.minInterval,
+        CONFIG.autoFlipper.baseInterval - CONFIG.autoFlipper.intervalReduction * autoFlipperLevel
+    );
+
+    autoFlipperTimer = setInterval(() => {
+        flipCoins(false);
+    }, autoFlipperInterval);
+
+    autoflipProgressTimer = setInterval(() => {
+        autoflipProgress += 100;
+        const percent = Math.min(100, (autoflipProgress / autoFlipperInterval) * 100);
+        const button = document.getElementById('upgrade-auto-button');
+        if (button) {
+            button.style.background = `repeating-linear-gradient(45deg, #4CAF50 ${percent}%, #45a049 ${percent}%, #45a049 100%)`;
+        }
+        if (autoflipProgress >= autoFlipperInterval) {
+            autoflipProgress = 0;
+        }
+    }, 100);
+}
+
+function showUpgradesSection() {
+    const upgradesDiv = document.getElementById('upgrades');
+    upgradesDiv.style.display = 'block';
+    updateUpgradeDisplay();
+}
+
+function updateUpgradeDisplay() {
+    const upgradesList = document.getElementById('upgrades-list');
+    upgradesList.innerHTML = '';
+    if (purchasedUpgrades.includes('autoflipper')) {
+        const upgradeInfo = document.createElement('div');
+        upgradeInfo.className = 'upgrade-item';
+        upgradeInfo.innerText = `Autoflipper: v${autoFlipperLevel}`;
+        upgradesList.appendChild(upgradeInfo);
+    }
+}
+
+// ============================
+// SETTINGS
+// ============================
+
 function toggleSound() {
     soundEnabled = !soundEnabled;
     updateDisplay();
@@ -208,113 +344,15 @@ function resetGame() {
             money = 0;
             lifetimeTotal = 0;
             soundEnabled = CONFIG.soundEnabledDefault;
-            autoFlipperUnlocked = false;
-            autoFlipperActive = false;
-            autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
-            autoFlipperTimer = null;
+            purchasedUpgrades = [];
             autoFlipperLevel = 0;
+            clearInterval(autoFlipperTimer);
+            clearInterval(autoflipProgressTimer);
+            autoflipProgress = 0;
 
             initializeCoins();
             saveGame();
             location.reload();
         }
-    }
-}
-
-// Autoflipper-delen
-function checkAutoFlipperUnlock() {
-    if (!autoFlipperUnlocked && money >= CONFIG.autoFlipper.unlockAt) {
-        autoFlipperUnlocked = true;
-        startAutoFlipper();
-        showAutoFlipperUpgradeButton();
-    }
-}
-
-function startAutoFlipper() {
-    if (autoFlipperActive) return;
-    autoFlipperActive = true;
-    startAutoFlipperTimer();
-}
-
-function startAutoFlipperTimer() {
-    if (!autoFlipperActive) return;
-
-    let elapsed = 0;
-    const button = document.getElementById('upgrade-auto-button');
-    if (!button) return;
-
-    clearInterval(autoFlipperTimer);
-    autoFlipperTimer = setInterval(() => {
-        elapsed += 100;
-        const percent = Math.min(100, (elapsed / autoFlipperInterval) * 100);
-
-        button.style.background = `linear-gradient(to right, green ${percent}%, white ${percent}%)`;
-
-        if (elapsed >= autoFlipperInterval) {
-            flipCoins();
-            elapsed = 0;
-            button.style.background = `linear-gradient(to right, green 0%, white 0%)`;
-        }
-    }, 100);
-}
-
-function upgradeAutoFlipper() {
-    const upgradeCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
-
-    if (money >= upgradeCost) {
-        money -= upgradeCost;
-        autoFlipperLevel += 1;
-
-        autoFlipperInterval = Math.max(
-            CONFIG.autoFlipper.minInterval,
-            CONFIG.autoFlipper.baseInterval - CONFIG.autoFlipper.intervalReduction * autoFlipperLevel
-        );
-
-        clearInterval(autoFlipperTimer);
-        startAutoFlipperTimer();
-
-        updateAutoFlipperButton();
-        updateDisplay();
-        saveGame();
-    }
-}
-
-function showAutoFlipperUpgradeButton() {
-    const actionsDiv = document.getElementById('actions');
-    const button = document.createElement('button');
-    button.id = 'upgrade-auto-button';
-    button.style.color = 'black';
-    button.textContent = `Buy Autoflipper: ${CONFIG.autoFlipper.upgradeBaseCost} ${CONFIG.currencyName}`;
-    button.addEventListener('click', upgradeAutoFlipper);
-    actionsDiv.appendChild(button);
-
-    updateAutoFlipperButton();
-}
-
-function updateAutoFlipperButton() {
-    const button = document.getElementById('upgrade-auto-button');
-    if (!button) return;
-
-    const nextCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
-
-    if (money >= nextCost) {
-        button.style.color = 'black';
-        button.style.fontWeight = 'bold';
-    } else {
-        button.style.color = 'red';
-        button.style.fontWeight = 'bold';
-    }
-
-    button.textContent = `Buy Autoflipper v${autoFlipperLevel + 1}: ${nextCost} ${CONFIG.currencyName}`;
-}
-
-function updateAutoflipperStatus() {
-    const status = document.getElementById('autoflipper-status');
-    if (!status) return;
-
-    if (!autoFlipperUnlocked) {
-        status.textContent = "Autoflipper: Locked";
-    } else {
-        status.textContent = `Autoflipper Level: ${autoFlipperLevel}`;
     }
 }
