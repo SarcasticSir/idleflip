@@ -6,9 +6,10 @@ let soundEnabled = CONFIG.soundEnabledDefault;
 let selectedBuyAmount = "1";
 
 // Oppgraderingsdata
-let purchasedUpgrades = []; // <--- NYTT: Husk alle kjøpte upgrades
+let purchasedUpgrades = [];
+let unlockedCoins = [];
 
-// Autoflipper spesifikt
+// Autoflipper
 let autoFlipperLevel = 0;
 let autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
 let autoFlipperTimer = null;
@@ -36,6 +37,7 @@ function loadGame() {
     const savedSound = localStorage.getItem('idleflip_sound');
     const savedUpgrades = JSON.parse(localStorage.getItem('idleflip_upgrades')) || [];
     const savedAutoLevel = parseInt(localStorage.getItem('idleflip_autoFlipperLevel')) || 0;
+    const savedUnlocked = JSON.parse(localStorage.getItem('idleflip_unlockedCoins')) || [];
 
     if (savedCoins) {
         coins = savedCoins;
@@ -51,6 +53,7 @@ function loadGame() {
     if (savedSound !== null) soundEnabled = savedSound === 'true';
     purchasedUpgrades = savedUpgrades;
     autoFlipperLevel = savedAutoLevel;
+    unlockedCoins = savedUnlocked;
 
     if (purchasedUpgrades.includes('autoflipper')) {
         setupAutoFlipper();
@@ -74,6 +77,7 @@ function saveGame() {
     localStorage.setItem('idleflip_sound', soundEnabled.toString());
     localStorage.setItem('idleflip_upgrades', JSON.stringify(purchasedUpgrades));
     localStorage.setItem('idleflip_autoFlipperLevel', autoFlipperLevel.toString());
+    localStorage.setItem('idleflip_unlockedCoins', JSON.stringify(unlockedCoins));
 }
 
 // ============================
@@ -86,7 +90,7 @@ function updateDisplay() {
 
     CONFIG.coins.forEach(coin => {
         const count = coins[coin.name] || 0;
-        if (count > 0 || money >= coin.value) {
+        if (count > 0 || unlockedCoins.includes(coin.name)) {
             const li = document.createElement('li');
             li.textContent = `${coin.name}: ${count}`;
             coinList.appendChild(li);
@@ -148,6 +152,10 @@ function flipCoins(isManual = false) {
                     heads++;
                     money += coin.value;
                     lifetimeTotal += coin.value;
+
+                    if (!unlockedCoins.includes(coin.name)) {
+                        unlockedCoins.push(coin.name);
+                    }
                 }
             }
         });
@@ -191,6 +199,11 @@ function buyBestCoin() {
             if (amountToBuy > 0) {
                 money -= coin.value * amountToBuy;
                 coins[coin.name] += amountToBuy;
+
+                if (!unlockedCoins.includes(coin.name)) {
+                    unlockedCoins.push(coin.name);
+                }
+
                 autoUpgradeCoins();
                 updateDisplay();
                 saveGame();
@@ -208,6 +221,10 @@ function autoUpgradeCoins() {
         while (coins[current.name] >= current.upgradeCost) {
             coins[current.name] -= current.upgradeCost;
             coins[next.name] += 1;
+
+            if (!unlockedCoins.includes(next.name)) {
+                unlockedCoins.push(next.name);
+            }
         }
     }
 }
@@ -254,10 +271,10 @@ function purchaseOrUpgradeAutoFlipper() {
 
         if (!purchasedUpgrades.includes('autoflipper')) {
             purchasedUpgrades.push('autoflipper');
-            setupAutoFlipper();
             showUpgradesSection();
         }
 
+        setupAutoFlipper(); // Flyttet utenfor if
         updateUpgradeDisplay();
         updateDisplay();
         saveGame();
@@ -265,6 +282,10 @@ function purchaseOrUpgradeAutoFlipper() {
 }
 
 function setupAutoFlipper() {
+    autoFlipperInterval = Math.max(
+        CONFIG.autoFlipper.minInterval,
+        CONFIG.autoFlipper.baseInterval - CONFIG.autoFlipper.intervalReduction * autoFlipperLevel
+    );
     restartAutoFlipperTimer();
 }
 
@@ -345,6 +366,7 @@ function resetGame() {
             lifetimeTotal = 0;
             soundEnabled = CONFIG.soundEnabledDefault;
             purchasedUpgrades = [];
+            unlockedCoins = [];
             autoFlipperLevel = 0;
             clearInterval(autoFlipperTimer);
             clearInterval(autoflipProgressTimer);
