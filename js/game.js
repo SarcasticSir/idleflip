@@ -3,71 +3,89 @@
 // Spilldata
 let coins = {};
 let money = 0;
+let lifetimeTotal = 0;
 let soundEnabled = CONFIG.soundEnabledDefault;
-let selectedBuyAmount = "1"; // standard 1x
+let selectedBuyAmount = "1";
+
+// Autoflipper data
+let autoFlipperUnlocked = false;
+let autoFlipperActive = false;
+let autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
+let autoFlipperTimer = null;
+let autoFlipperLevel = 0;
 
 // Lyd
 let flipSound = new Audio('assets/sounds/placeholder_flip.mp3');
 
+// Koble knapper
+document.getElementById('flip-button').addEventListener('click', flipCoins);
+document.getElementById('buy-coin-button').addEventListener('click', buyBestCoin);
+document.getElementById('mute-button').addEventListener('click', toggleSound);
 document.getElementById('reset-button').addEventListener('click', resetGame);
 
+// Start spill
+loadGame();
 
-// Last data fra localStorage
 function loadGame() {
     const savedCoins = JSON.parse(localStorage.getItem('idleflip_coins'));
     const savedMoney = parseInt(localStorage.getItem('idleflip_money'));
+    const savedLifetime = parseInt(localStorage.getItem('idleflip_lifetime'));
     const savedSound = localStorage.getItem('idleflip_sound');
 
     if (savedCoins) {
         coins = savedCoins;
-        if (!coins["Nano Tick"] || coins["Nano Tick"] < 1) {
-            coins["Nano Tick"] = 1;
+        if (!coins[CONFIG.coins[0].name] || coins[CONFIG.coins[0].name] < 1) {
+            coins[CONFIG.coins[0].name] = 1;
         }
     } else {
         initializeCoins();
     }
 
     if (!isNaN(savedMoney)) money = savedMoney;
+    if (!isNaN(savedLifetime)) lifetimeTotal = savedLifetime;
     if (savedSound !== null) soundEnabled = savedSound === 'true';
 
     updateDisplay();
     setupAmountButtons();
 }
 
-// Start med 1 Nano Tick hvis ingen lagret
 function initializeCoins() {
     CONFIG.coins.forEach(coin => {
         coins[coin.name] = 0;
     });
-    coins["Nano Tick"] = 1;
+    coins[CONFIG.coins[0].name] = 1;
 }
 
-// Lagre data
 function saveGame() {
     localStorage.setItem('idleflip_coins', JSON.stringify(coins));
     localStorage.setItem('idleflip_money', money.toString());
+    localStorage.setItem('idleflip_lifetime', lifetimeTotal.toString());
     localStorage.setItem('idleflip_sound', soundEnabled.toString());
 }
 
-// Oppdater skjermen
 function updateDisplay() {
     const coinList = document.getElementById('coin-list');
     coinList.innerHTML = '';
 
     CONFIG.coins.forEach(coin => {
         const count = coins[coin.name] || 0;
-        const li = document.createElement('li');
-        li.textContent = `${coin.name}: ${count}`;
-        coinList.appendChild(li);
+        if (count > 0 || money >= coin.value) {
+            const li = document.createElement('li');
+            li.textContent = `${coin.name}: ${count}`;
+            coinList.appendChild(li);
+        }
     });
 
     document.getElementById('money').innerText = `${money} ${CONFIG.currencyName}`;
+    document.getElementById('lifetime').innerText = `${lifetimeTotal} ${CONFIG.currencyName} collected`;
     document.getElementById('mute-button').innerText = `Mute: ${soundEnabled ? "Off" : "On"}`;
 
     updateBuyButtonText();
+    updateAutoflipperStatus();
+    updateAutoFlipperButton();
+    checkAutoFlipperUnlock();
 }
 
-// Oppdater "Buy best coin!" teksten
 function updateBuyButtonText() {
     for (let i = CONFIG.coins.length - 1; i >= 0; i--) {
         const coin = CONFIG.coins[i];
@@ -87,7 +105,6 @@ function updateBuyButtonText() {
     document.getElementById('buy-coin-button').innerText = "Not enough money!";
 }
 
-// Flip mynter
 function flipCoins() {
     document.getElementById('flip-result').innerText = 'Flipping...';
 
@@ -105,9 +122,12 @@ function flipCoins() {
                 } else {
                     heads++;
                     money += coin.value;
+                    lifetimeTotal += coin.value;
                 }
             }
         });
+
+        ensureAtLeastOneCoin();
 
         document.getElementById('flip-result').innerText = `${heads} Heads, ${tails} Tails`;
         autoUpgradeCoins();
@@ -116,7 +136,13 @@ function flipCoins() {
     }, CONFIG.flipDuration);
 }
 
-// Kjøp beste mynt basert på valgt antall
+function ensureAtLeastOneCoin() {
+    const totalCoins = Object.values(coins).reduce((a, b) => a + b, 0);
+    if (totalCoins === 0) {
+        coins[CONFIG.coins[0].name] = 1;
+    }
+}
+
 function buyBestCoin() {
     for (let i = CONFIG.coins.length - 1; i >= 0; i--) {
         const coin = CONFIG.coins[i];
@@ -140,10 +166,8 @@ function buyBestCoin() {
             }
         }
     }
-    //alert("Not enough money!");
 }
 
-// Automatisk oppgradering av mynter
 function autoUpgradeCoins() {
     for (let i = 0; i < CONFIG.coins.length - 1; i++) {
         const current = CONFIG.coins[i];
@@ -156,14 +180,12 @@ function autoUpgradeCoins() {
     }
 }
 
-// Toggle lyd
 function toggleSound() {
     soundEnabled = !soundEnabled;
     updateDisplay();
     saveGame();
 }
 
-// Sett opp antall-knapper
 function setupAmountButtons() {
     const buttons = document.querySelectorAll('.amount-button');
     buttons.forEach(button => {
@@ -178,28 +200,121 @@ function setupAmountButtons() {
     document.querySelector('.amount-button[data-amount="1"]').classList.add('selected');
 }
 
-// Koble knapper
-document.getElementById('flip-button').addEventListener('click', flipCoins);
-document.getElementById('buy-coin-button').addEventListener('click', buyBestCoin);
-document.getElementById('mute-button').addEventListener('click', toggleSound);
-
-// Start spill
-loadGame();
-
 function resetGame() {
     if (confirm("Would you like to reset your progress?")) {
         if (confirm("ARE YOU SURE? THIS ACTION CANNOT BE UNDONE!")) {
-            // Slett alt lagret
-            localStorage.removeItem('idleflip_coins');
-            localStorage.removeItem('idleflip_money');
-            localStorage.removeItem('idleflip_sound');
-
-            // Start spilldata på nytt
-            initializeCoins(); // <-- denne setter 1 Nano Tick eller 1 første coin
+            localStorage.clear();
+            coins = {};
             money = 0;
-            saveGame(); // lagre slik at neste last er korrekt
+            lifetimeTotal = 0;
+            soundEnabled = CONFIG.soundEnabledDefault;
+            autoFlipperUnlocked = false;
+            autoFlipperActive = false;
+            autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
+            autoFlipperTimer = null;
+            autoFlipperLevel = 0;
 
-            location.reload(); // Last inn på nytt
+            initializeCoins();
+            saveGame();
+            location.reload();
         }
+    }
+}
+
+// Autoflipper-delen
+function checkAutoFlipperUnlock() {
+    if (!autoFlipperUnlocked && money >= CONFIG.autoFlipper.unlockAt) {
+        autoFlipperUnlocked = true;
+        startAutoFlipper();
+        showAutoFlipperUpgradeButton();
+    }
+}
+
+function startAutoFlipper() {
+    if (autoFlipperActive) return;
+    autoFlipperActive = true;
+    startAutoFlipperTimer();
+}
+
+function startAutoFlipperTimer() {
+    if (!autoFlipperActive) return;
+
+    let elapsed = 0;
+    const button = document.getElementById('upgrade-auto-button');
+    if (!button) return;
+
+    clearInterval(autoFlipperTimer);
+    autoFlipperTimer = setInterval(() => {
+        elapsed += 100;
+        const percent = Math.min(100, (elapsed / autoFlipperInterval) * 100);
+
+        button.style.background = `linear-gradient(to right, green ${percent}%, white ${percent}%)`;
+
+        if (elapsed >= autoFlipperInterval) {
+            flipCoins();
+            elapsed = 0;
+            button.style.background = `linear-gradient(to right, green 0%, white 0%)`;
+        }
+    }, 100);
+}
+
+function upgradeAutoFlipper() {
+    const upgradeCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
+
+    if (money >= upgradeCost) {
+        money -= upgradeCost;
+        autoFlipperLevel += 1;
+
+        autoFlipperInterval = Math.max(
+            CONFIG.autoFlipper.minInterval,
+            CONFIG.autoFlipper.baseInterval - CONFIG.autoFlipper.intervalReduction * autoFlipperLevel
+        );
+
+        clearInterval(autoFlipperTimer);
+        startAutoFlipperTimer();
+
+        updateAutoFlipperButton();
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function showAutoFlipperUpgradeButton() {
+    const actionsDiv = document.getElementById('actions');
+    const button = document.createElement('button');
+    button.id = 'upgrade-auto-button';
+    button.style.color = 'black';
+    button.textContent = `Buy Autoflipper: ${CONFIG.autoFlipper.upgradeBaseCost} ${CONFIG.currencyName}`;
+    button.addEventListener('click', upgradeAutoFlipper);
+    actionsDiv.appendChild(button);
+
+    updateAutoFlipperButton();
+}
+
+function updateAutoFlipperButton() {
+    const button = document.getElementById('upgrade-auto-button');
+    if (!button) return;
+
+    const nextCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
+
+    if (money >= nextCost) {
+        button.style.color = 'black';
+        button.style.fontWeight = 'bold';
+    } else {
+        button.style.color = 'red';
+        button.style.fontWeight = 'bold';
+    }
+
+    button.textContent = `Buy Autoflipper v${autoFlipperLevel + 1}: ${nextCost} ${CONFIG.currencyName}`;
+}
+
+function updateAutoflipperStatus() {
+    const status = document.getElementById('autoflipper-status');
+    if (!status) return;
+
+    if (!autoFlipperUnlocked) {
+        status.textContent = "Autoflipper: Locked";
+    } else {
+        status.textContent = `Autoflipper Level: ${autoFlipperLevel}`;
     }
 }

@@ -6,37 +6,47 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <h1>Idle Flip</h1>
-
-    <div id="game">
-        <div id="stats">
-            <p>Coins:</p>
-            <ul id="coin-list">
-                <!-- List of coin types and counts -->
-            </ul>
-            <p>Total: <span id="money">0</span> </p>
+    <div id="layout">
+        <!-- Oppgraderinger -->
+        <div id="upgrades">
+            <h2>Upgrades</h2>
+            <div id="upgrades-list">
+                <!-- Oppgraderingsknapper kommer dynamisk her -->
+            </div>
         </div>
 
-        <div id="actions">
-            <button id="flip-button">Flip Coins</button>
+        <!-- Spillcontainer -->
+        <div id="game">
+            <h1>Idle Flip</h1>
 
-            <div id="buy-amount-buttons">
-                <button class="amount-button" data-amount="1">1x</button>
-                <button class="amount-button" data-amount="5">5x</button>
-                <button class="amount-button" data-amount="10">10x</button>
-                <button class="amount-button" data-amount="max">Max</button>
+            <div id="stats">
+                <p>Coins:</p>
+                <ul id="coin-list"></ul>
+                <p>Total: <span id="money">0</span></p>
+                <p>Lifetime Total: <span id="lifetime">0 Chrono Units collected</span></p>
             </div>
 
-            <button id="buy-coin-button">Buy best coin!</button>
+            <div id="actions">
+                <button id="flip-button">Flip Coins</button>
 
-            <button id="mute-button">Mute: Off</button>
-        </div>
+                <div id="buy-amount-buttons">
+                    <button class="amount-button" data-amount="1">1x</button>
+                    <button class="amount-button" data-amount="5">5x</button>
+                    <button class="amount-button" data-amount="10">10x</button>
+                    <button class="amount-button" data-amount="max">Max</button>
+                </div>
 
-        <div id="results">
-            <p>Last Flip: <span id="flip-result">-</span></p>
-        </div>
-        <div id="reset-container">
-            <button id="reset-button">RESET</button>
+                <button id="buy-coin-button">Buy best coin!</button>
+                <button id="mute-button">Mute: Off</button>
+            </div>
+
+            <div id="results">
+                <p>Last Flip: <span id="flip-result">-</span></p>
+            </div>
+
+            <div id="reset-container">
+                <button id="reset-button">RESET</button>
+            </div>
         </div>
     </div>
 
