@@ -329,15 +329,16 @@ function startAutoFlipperTimer() {
         elapsed += 100;
         const percent = Math.min(100, (elapsed / autoFlipperInterval) * 100);
 
-        button.style.background = `linear-gradient(to right, green ${percent}%, white ${percent}%)`;
+        button.style.background = `linear-gradient(to right, #bbbbbb ${percent}%, #dddddd ${percent}%)`;
 
         if (elapsed >= autoFlipperInterval) {
             flipCoins(false);
             elapsed = 0;
-            button.style.background = `linear-gradient(to right, green 0%, white 0%)`;
+            button.style.background = `linear-gradient(to right, #bbbbbb 0%, #dddddd 0%)`;
         }
     }, 100);
 }
+
 
 // ============================
 // UPGRADES SYSTEM
