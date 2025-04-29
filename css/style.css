@@ -188,3 +188,24 @@ h1 {
     background-color: var(--reset-button-hover-bg);
     color: white;
 }
+@keyframes fly-up-fade {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -100px);
+    }
+}
+
+.luck-popup {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    animation: fly-up-fade 2s forwards;
+    white-space: nowrap;
+}

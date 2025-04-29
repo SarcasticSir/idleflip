@@ -2,8 +2,18 @@
 let coins = {};
 let money = 0;
 let lifetimeTotal = 0;
-let soundEnabled = CONFIG.soundEnabledDefault;
+// lyd flagg initialiseres senere etter at CONFIG er lastet
+let soundEnabled;
 let selectedBuyAmount = "1";
+
+function formatMoney(amount) {
+    if (amount < 1e15) {
+        return amount.toLocaleString('en-US');
+    } else {
+        return amount.toExponential(2).replace('+', '');
+    }
+}
+
 
 // Oppgraderingsdata
 let purchasedUpgrades = [];
@@ -12,7 +22,8 @@ let achievementsUnlocked = [];
 
 // Autoflipper
 let autoFlipperLevel = 0;
-let autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
+// autoFlipperInterval settes i loadGame()
+let autoFlipperInterval = 0;
 let autoFlipperTimer = null;
 
 // Lyd
@@ -64,25 +75,36 @@ function loadGame() {
     });
 
     // Offline progress
-    if (purchasedUpgrades.includes('autoflipper')) {
-        const autoflipInterval = Math.max(
-            CONFIG.autoFlipper.minInterval,
-            CONFIG.autoFlipper.baseInterval - CONFIG.autoFlipper.intervalReduction * autoFlipperLevel
-        );
-        const flipsMissed = Math.floor(timeAway / autoflipInterval);
-
-        if (flipsMissed > 0) {
-            let earned = 0;
-            CONFIG.coins.forEach(coin => {
-                const count = coins[coin.name] || 0;
-                earned += count * coin.value * flipsMissed * 0.5;
-            });
-            money += Math.floor(earned);
-            lifetimeTotal += Math.floor(earned);
-
-            alert(`Welcome back! You earned ${Math.floor(earned)} ${CONFIG.currencyName} while you were away!`);
-        }
+    // Offline progress
+if (purchasedUpgrades.includes('autoflipper')) {
+    let autoflipInterval = CONFIG.autoFlipper.baseInterval;
+    for (let i = 0; i < autoFlipperLevel; i++) {
+        autoflipInterval *= CONFIG.autoFlipper.intervalReductionPercent;
     }
+    autoflipInterval = Math.max(CONFIG.autoFlipper.minInterval, autoflipInterval);
+
+    const flipsMissed = Math.floor(timeAway / autoflipInterval);
+
+    if (flipsMissed > 0) {
+        let earned = 0;
+        CONFIG.coins.forEach(coin => {
+            const count = coins[coin.name] || 0;
+            earned += count * coin.value * flipsMissed * 0.5;
+        });
+        money += Math.floor(earned);
+        lifetimeTotal += Math.floor(earned);
+
+        alert(`Welcome back! You earned ${Math.floor(earned)} ${CONFIG.currencyName} while you were away!`);
+    }
+}
+
+    soundEnabled = (savedSound !== null) ? savedSound === 'true' : CONFIG.soundEnabledDefault;
+
+    autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
+    for (let i = 0; i < autoFlipperLevel; i++) {
+        autoFlipperInterval *= CONFIG.autoFlipper.intervalReductionPercent;
+    }
+    autoFlipperInterval = Math.max(CONFIG.autoFlipper.minInterval, autoFlipperInterval);
 
     updateDisplay();
     setupAmountButtons();
@@ -123,8 +145,8 @@ function updateDisplay() {
         }
     });
 
-    document.getElementById('money').innerText = `${money} ${CONFIG.currencyName}`;
-    document.getElementById('lifetime').innerText = `${lifetimeTotal} ${CONFIG.currencyName} collected`;
+    document.getElementById('money').innerText = `${formatMoney(money)} ${CONFIG.currencyName}`;
+    document.getElementById('lifetime').innerText = `${formatMoney(lifetimeTotal)} ${CONFIG.currencyName} collected`;
     document.getElementById('mute-button').innerText = `Mute: ${soundEnabled ? "Off" : "On"}`;
 
     updateBuyButtonText();
@@ -143,7 +165,7 @@ function updateBuyButtonText() {
             } else if (selectedBuyAmount === "max") {
                 amount = Math.floor(money / coin.value);
             }
-            document.getElementById('buy-coin-button').innerText = `Buy ${amount} ${coin.name}${amount > 1 ? 's' : ''} (${coin.value * amount}¢)`;
+            document.getElementById('buy-coin-button').innerText = `Buy ${amount} ${coin.name}${amount > 1 ? 's' : ''} (${formatMoney(coin.value * amount)} ChUn)`;
             return;
         }
     }
@@ -159,29 +181,77 @@ function manualFlipCoins() {
 }
 
 function flipCoins(isManual = false) {
-    if (isManual) {
-        document.getElementById('flip-result').innerText = 'Flipping...';
+    if (!CONFIG.luckSettings) {
+        console.warn("CONFIG.luckSettings mangler – setter fallback.");
+        CONFIG.luckSettings = {
+            variationPercent: 5,
+            megaLuckChance: 0.01,
+            megaUnluckChance: 0.01,
+            megaLuckMessages: ["Mega lucky!"],
+            megaUnluckMessages: ["Mega unlucky!"],
+            luckyMessages: ["Lucky!"],
+            unluckyMessages: ["Unlucky!"]
+        };
     }
 
-    if (soundEnabled) flipSound.play();
+    if (isManual && soundEnabled && flipSound?.play) {
+        try { flipSound.play(); } catch (e) {}
+    }
 
     setTimeout(() => {
         let heads = 0;
         let tails = 0;
+        let luckMessage = null;
 
         CONFIG.coins.forEach(coin => {
             const count = coins[coin.name] || 0;
-            for (let i = 0; i < count; i++) {
-                if (Math.random() < 0.5) {
-                    tails++;
-                } else {
-                    heads++;
-                    money += coin.value;
-                    lifetimeTotal += coin.value;
+            if (count > 0) {
+                let chanceModifier = 0;
 
-                    if (!unlockedCoins.includes(coin.name)) {
-                        unlockedCoins.push(coin.name);
+                const megaLuckRoll = Math.random();
+                if (megaLuckRoll < CONFIG.luckSettings.megaLuckChance) {
+                    chanceModifier = 0.2;
+                    luckMessage = CONFIG.luckSettings.megaLuckMessages[Math.floor(Math.random() * CONFIG.luckSettings.megaLuckMessages.length)];
+                }
+                const megaUnluckRoll = Math.random();
+                if (!luckMessage && megaUnluckRoll < CONFIG.luckSettings.megaUnluckChance) {
+                    chanceModifier = -0.2;
+                    luckMessage = CONFIG.luckSettings.megaUnluckMessages[Math.floor(Math.random() * CONFIG.luckSettings.megaUnluckMessages.length)];
+                }
+                if (!luckMessage) {
+                    const variationRange = CONFIG.luckSettings.variationPercent / 100;
+                    const variation = (Math.random() - 0.5) * variationRange * 2;
+                    chanceModifier = variation;
+                    if (variation > 0.03) {
+                        luckMessage = CONFIG.luckSettings.luckyMessages[Math.floor(Math.random() * CONFIG.luckSettings.luckyMessages.length)];
+                    } else if (variation < -0.03) {
+                        luckMessage = CONFIG.luckSettings.unluckyMessages[Math.floor(Math.random() * CONFIG.luckSettings.unluckyMessages.length)];
                     }
+                }
+
+                let adjustedChance = Math.max(0, Math.min(1, 0.5 + chanceModifier));
+
+                if (count <= 100) {
+                    // 🎯 Få mynter: Flip individuelt
+                    for (let i = 0; i < count; i++) {
+                        if (Math.random() < adjustedChance) {
+                            heads++;
+                            money += coin.value;
+                            lifetimeTotal += coin.value;
+                        } else {
+                            tails++;
+                        }
+                    }
+                } else {
+                    // 🎯 Mange mynter: Bruk statistikk
+                    const calculatedHeads = Math.floor(count * adjustedChance);
+                    const calculatedTails = count - calculatedHeads;
+
+                    heads += calculatedHeads;
+                    tails += calculatedTails;
+
+                    money += calculatedHeads * coin.value;
+                    lifetimeTotal += calculatedHeads * coin.value;
                 }
             }
         });
@@ -194,9 +264,13 @@ function flipCoins(isManual = false) {
 
         if (isManual) {
             document.getElementById('flip-result').innerText = `${heads} Heads, ${tails} Tails`;
+            if (luckMessage) {
+                showLuckPopup(luckMessage);
+            }
         }
     }, CONFIG.flipDuration);
 }
+
 
 function ensureAtLeastOneCoin() {
     const totalCoins = Object.values(coins).reduce((a, b) => a + b, 0);
@@ -279,16 +353,27 @@ function updateAutoFlipperButton() {
     const button = document.getElementById('upgrade-auto-button');
     if (!button) return;
 
+    if (autoFlipperLevel >= CONFIG.autoFlipper.maxLevel) {
+        button.innerText = "Autoflipper maxed!";
+        button.style.color = 'black'; // 🔥 Vanlig farge, ikke disabled
+        return;
+    }
+
     const nextCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
 
     button.innerText = purchasedUpgrades.includes('autoflipper')
-        ? `Upgrade Autoflipper v${autoFlipperLevel + 1}: ${nextCost} ${CONFIG.currencyName}`
-        : `Buy Autoflipper v1: ${CONFIG.autoFlipper.upgradeBaseCost} ${CONFIG.currencyName}`;
+        ? `Upgrade Autoflipper v${autoFlipperLevel + 1}: ${formatMoney(nextCost)} ${CONFIG.currencyName}`
+        : `Buy Autoflipper v1: ${formatMoney(CONFIG.autoFlipper.upgradeBaseCost)} ${CONFIG.currencyName}`;
 
     button.style.color = (money >= nextCost) ? 'black' : 'red';
 }
 
+
 function purchaseOrUpgradeAutoFlipper() {
+    if (autoFlipperLevel >= CONFIG.autoFlipper.maxLevel) {
+        return; // 🛑 Spilleren kan ikke oppgradere over maks
+    }
+
     const nextCost = CONFIG.autoFlipper.upgradeBaseCost * Math.pow(CONFIG.autoFlipper.upgradeCostMultiplier, autoFlipperLevel);
 
     if (money >= nextCost) {
@@ -297,8 +382,8 @@ function purchaseOrUpgradeAutoFlipper() {
 
         if (!purchasedUpgrades.includes('autoflipper')) {
             purchasedUpgrades.push('autoflipper');
-            showUpgradesSection();
             setupAutoFlipper();
+            showUpgradesSection();
         } else {
             setupAutoFlipper();
         }
@@ -309,13 +394,21 @@ function purchaseOrUpgradeAutoFlipper() {
     }
 }
 
+
 function setupAutoFlipper() {
-    autoFlipperInterval = Math.max(
-        CONFIG.autoFlipper.minInterval,
-        CONFIG.autoFlipper.baseInterval - CONFIG.autoFlipper.intervalReduction * autoFlipperLevel
-    );
+    clearInterval(autoFlipperTimer);
+
+    autoFlipperInterval = CONFIG.autoFlipper.baseInterval;
+
+    for (let i = 0; i < autoFlipperLevel; i++) {
+        autoFlipperInterval *= CONFIG.autoFlipper.intervalReductionPercent;
+    }
+
+    autoFlipperInterval = Math.max(CONFIG.autoFlipper.minInterval, autoFlipperInterval);
+
     startAutoFlipperTimer();
 }
+
 
 function startAutoFlipperTimer() {
     clearInterval(autoFlipperTimer);
@@ -359,6 +452,19 @@ function startAutoFlipperTimer() {
 }
 
 
+
+function showLuckPopup(message) {
+    const container = document.getElementById('luck-popup-container');
+    const popup = document.createElement('div');
+    popup.className = 'luck-popup';
+    popup.innerText = message;
+    container.appendChild(popup);
+
+    // Fjern popup etter 2 sekunder
+    setTimeout(() => {
+        container.removeChild(popup);
+    }, 2000);
+}
 
 
 
