@@ -324,20 +324,43 @@ function startAutoFlipperTimer() {
     if (!button) return;
 
     let elapsed = 0;
+    const stepSize = 5; // 5% per blokk
+    const blockWidth = stepSize; // hver blokk dekker 5% av bredden
 
     autoFlipperTimer = setInterval(() => {
         elapsed += 100;
         const percent = Math.min(100, (elapsed / autoFlipperInterval) * 100);
 
-        button.style.background = `linear-gradient(to right, #bbbbbb ${percent}%, #dddddd ${percent}%)`;
+        const filledBlocks = Math.floor(percent / stepSize);
+
+        let backgroundParts = [];
+
+        for (let i = 0; i < 20; i++) { // 20 blokker (100/5)
+            if (i < filledBlocks) {
+                // Alternere farge på hver fylt blokk
+                const color = (i % 2 === 0) ? '#bbbbbb' : '#999999';
+                backgroundParts.push(`${color} ${(i * blockWidth)}% ${(i + 1) * blockWidth}%`);
+            } else {
+                // Ikke fylt blokk = bakgrunnsgrå
+                backgroundParts.push(`#dddddd ${(i * blockWidth)}% ${(i + 1) * blockWidth}%`);
+            }
+        }
+
+        button.style.background = `linear-gradient(to right, ${backgroundParts.join(', ')})`;
 
         if (elapsed >= autoFlipperInterval) {
             flipCoins(false);
             elapsed = 0;
-            button.style.background = `linear-gradient(to right, #bbbbbb 0%, #dddddd 0%)`;
+            button.style.background = `
+                linear-gradient(to right, #dddddd 0%, #dddddd 100%)
+            `;
         }
     }, 100);
 }
+
+
+
+
 
 
 // ============================
