@@ -1,10 +1,22 @@
-/* css/style.css */
+:root {
+    --background-color: #f0f0f0;
+    --container-color: #d8d8d8;
+    --border-color: #333333;
+    --text-color: #222222;
+    --button-bg: #eeeeee;
+    --button-hover-bg: #cccccc;
+    --button-text-color: #333333;
+    --highlight-color: #555555;
+    --reset-button-color: #880000;
+    --reset-button-hover-bg: #880000;
+}
 
 body {
     font-family: 'Courier New', Courier, monospace;
-    background-color: #f0f0f0;
+    background-color: var(--background-color);
     margin: 0;
     padding: 20px;
+    color: var(--text-color);
 }
 
 #layout {
@@ -17,13 +29,13 @@ body {
 /* Oppgraderinger (starter skjult) */
 #upgrades {
     display: none;
-    background-color: #e0e0e0;
-    border: 3px solid #333;
+    background-color: var(--container-color);
+    border: 3px solid var(--border-color);
     padding: 15px;
     border-radius: 2px;
     width: 200px;
     min-height: 400px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
 }
 
 #upgrades h2 {
@@ -35,76 +47,63 @@ body {
 #upgrades-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 5px;
 }
 
-#upgrades-list button {
-    width: 100%;
-    padding: 10px;
-    font-size: 1em;
-    border: 2px solid #333;
-    background: repeating-linear-gradient(
-        45deg,
-        #4CAF50,
-        #4CAF50 5px,
-        #45a049 5px,
-        #45a049 10px
-    );
-    color: black;
+.upgrade-item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9em;
     font-weight: bold;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: transform 0.1s, background 0.3s;
-}
-
-#upgrades-list button:hover {
-    transform: scale(1.02);
+    color: var(--highlight-color);
+    margin: 2px 0;
 }
 
 /* Spillcontainer */
 #game {
-    background-color: #ffffff;
-    border: 3px solid #333;
+    background-color: var(--container-color);
+    border: 3px solid var(--border-color);
     border-radius: 2px;
     padding: 20px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
 }
 
 h1 {
     text-align: center;
     font-size: 2em;
     margin-bottom: 20px;
+    color: var(--text-color);
 }
 
-/* Stats-seksjonen */
 #stats {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+}
+
+#money {
+    font-size: 1.5em;
+    color: var(--highlight-color);
+}
+
+#lifetime {
+    font-size: 1em;
+    color: var(--highlight-color);
 }
 
 #coin-list {
     list-style-type: none;
     padding: 0;
     margin: 10px 0;
+    text-align: center;
 }
 
 #coin-list li {
     margin: 5px 0;
 }
 
-#money {
-    font-size: 1.5em;
-    color: #2c7a7b;
-}
-
-#lifetime {
-    font-size: 1em;
-    color: #555;
-}
-
-/* Actions */
 #actions {
     display: flex;
     flex-direction: column;
@@ -115,23 +114,25 @@ h1 {
 #actions button {
     padding: 10px;
     font-size: 1em;
-    border: 2px solid #333;
-    background: repeating-linear-gradient(
-        45deg,
-        #4CAF50,
-        #4CAF50 5px,
-        #45a049 5px,
-        #45a049 10px
-    );
-    color: white;
+    border: 2px solid var(--border-color);
+    background-color: var(--button-bg);
+    color: var(--button-text-color);
     font-weight: bold;
     cursor: pointer;
     border-radius: 2px;
-    transition: transform 0.1s, background 0.3s;
+    transition: transform 0.1s, background-color 0.3s;
 }
 
 #actions button:hover {
+    background-color: var(--button-hover-bg);
     transform: scale(1.02);
+}
+
+/* Spesiell stil for autoflipper-knappen */
+#upgrade-auto-button {
+    background-color: var(--button-bg);
+    color: var(--button-text-color);
+    font-weight: bold;
 }
 
 #buy-amount-buttons {
@@ -144,15 +145,15 @@ h1 {
     flex: 1;
     padding: 8px;
     font-size: 0.9em;
-    border: 2px solid #333;
-    background-color: white;
-    color: #333;
+    border: 2px solid var(--border-color);
+    background-color: var(--button-bg);
+    color: var(--button-text-color);
     cursor: pointer;
     border-radius: 2px;
 }
 
 .amount-button.selected {
-    background-color: #007BFF;
+    background-color: var(--highlight-color);
     color: white;
 }
 
@@ -163,7 +164,7 @@ h1 {
 
 #flip-result {
     font-size: 1.2em;
-    color: #555;
+    color: var(--highlight-color);
 }
 
 #reset-container {
@@ -175,15 +176,36 @@ h1 {
 #reset-button {
     padding: 8px 12px;
     font-size: 0.9em;
-    border: 2px solid red;
+    border: 2px solid var(--reset-button-color);
     background-color: white;
-    color: red;
+    color: var(--reset-button-color);
     font-weight: bold;
     border-radius: 2px;
     transition: background-color 0.3s, color 0.3s;
 }
 
 #reset-button:hover {
-    background-color: red;
+    background-color: var(--reset-button-hover-bg);
     color: white;
+}
+@keyframes fly-up-fade {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -100px);
+    }
+}
+
+.luck-popup {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    animation: fly-up-fade 2s forwards;
+    white-space: nowrap;
 }
